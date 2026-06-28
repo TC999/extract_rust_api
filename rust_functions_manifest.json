@@ -1,0 +1,42 @@
+[
+  {
+    "name": "ty_to_string",
+    "signature": "fn ty_to_string(ty: &Type) -> String",
+    "file": "./src\\main.rs",
+    "line": 22,
+    "kind": "free",
+    "parent": ""
+  },
+  {
+    "name": "lit_to_string",
+    "signature": "fn lit_to_string(lit: &Lit) -> String",
+    "file": "./src\\main.rs",
+    "line": 88,
+    "kind": "free",
+    "parent": ""
+  },
+  {
+    "name": "build_fn_signature",
+    "signature": "fn build_fn_signature(inputs: &Punctuated<FnArg, Comma>, output: &ReturnType) -> String",
+    "file": "./src\\main.rs",
+    "line": 103,
+    "kind": "free",
+    "parent": ""
+  },
+  {
+    "name": "extract_from_file",
+    "signature": "fn extract_from_file(path: &Path) -> Vec<RustFunction>",
+    "file": "./src\\main.rs",
+    "line": 138,
+    "kind": "free",
+    "parent": ""
+  },
+  {
+    "name": "main",
+    "signature": "fn main() -> Result<()>",
+    "file": "./src\\main.rs",
+    "line": 188,
+    "kind": "free",
+    "parent": ""
+  }
+]

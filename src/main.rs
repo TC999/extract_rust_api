@@ -3,9 +3,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use syn::{
-    punctuated::Punctuated, token::Comma, ImplItem, Item, ItemFn, ItemImpl, TraitItem, FnArg, ReturnType,
-    Type, Pat, GenericArgument, PathArguments, TypePath, TypeReference, TypePtr, TypeSlice,
-    TypeArray, TypeTuple, TypeParen, TypeGroup, TypeImplTrait, TypeTraitObject,
+    punctuated::Punctuated, token::Comma, FnArg, ImplItem, Item, File, Pat, PathArguments, ReturnType, Type,
 };
 use syn::spanned::Spanned;  // ← 导入 Span 支持
 use walkdir::WalkDir;
@@ -72,7 +70,7 @@ fn ty_to_string(ty: &Type) -> String {
         }
         Type::Array(a) => {
             let len = match &a.len {
-                syn::Expr::Lit(lit) => lit.token.to_string(),
+                syn::Expr::Lit(lit) => lit_to_string(&lit.lit),
                 _ => "_".into(),
             };
             format!("[{}; {}]", ty_to_string(&a.elem), len)
@@ -82,6 +80,21 @@ fn ty_to_string(ty: &Type) -> String {
         Type::Group(g) => ty_to_string(&g.elem),
         Type::ImplTrait(_) => "impl Trait".into(),
         Type::TraitObject(_) => "dyn Trait".into(),
+        _ => "_".into(),
+    }
+}
+
+/// 将 `syn::Lit` 转换成可读字符串（用于数组长度表达式）
+fn lit_to_string(lit: &syn::Lit) -> String {
+    match lit {
+        syn::Lit::Int(i) => i.base10_digits().to_string(),
+        syn::Lit::Float(f) => f.base10_digits().to_string(),
+        syn::Lit::Str(s) => format!("\"{}\"", s.value()),
+        syn::Lit::Char(c) => format!("'{}'", c.value()),
+        syn::Lit::Byte(b) => format!("b'{}'", b.value() as char),
+        syn::Lit::ByteStr(bs) => format!("b\"{:?}\"", bs.value()),
+        syn::Lit::Bool(b) => b.value().to_string(),
+        syn::Lit::Verbatim(v) => v.to_string(),
         _ => "_".into(),
     }
 }
@@ -105,12 +118,11 @@ fn build_fn_signature(inputs: &Punctuated<FnArg, Comma>, output: &ReturnType) ->
                 if recv.mutability.is_some() {
                     s.push_str(" mut");
                 }
-                if let Some((_, lt)) = &recv.lifetime {
+                if let Some(lt) = recv.lifetime() {
+                    // lifetime() 返回 Option<&Lifetime>
                     s = format!("{} '{}", s, lt.ident);
                 }
-                if let Some(ty) = &recv.ty {
-                    s = format!("{}: {}", s, ty_to_string(ty));
-                }
+                s = format!("{}: {}", s, ty_to_string(&recv.ty));
                 s
             }
         }
@@ -134,9 +146,9 @@ fn extract_from_file(path: &Path) -> Vec<RustFunction> {
                 let sig = &func.sig;
                 let name = sig.ident.to_string();
                 let sig_str = build_fn_signature(&sig.inputs, &sig.output);
-                let line = sig.span().start().line;  // 现在可用了
+                let line = sig.span().start().line;
                 results.push(RustFunction {
-                    name,
+                    name: name.clone(),
                     signature: format!("fn {}{}", name, sig_str),
                     file: path.display().to_string(),
                     line,
@@ -157,7 +169,7 @@ fn extract_from_file(path: &Path) -> Vec<RustFunction> {
                         let sig_str = build_fn_signature(&sig.inputs, &sig.output);
                         let line = sig.span().start().line;
                         results.push(RustFunction {
-                            name,
+                            name: name.clone(),
                             signature: format!("fn {}{}", name, sig_str),
                             file: path.display().to_string(),
                             line,
